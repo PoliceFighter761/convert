@@ -113,6 +113,9 @@ async function doConvert (inputFiles, inputFormat, outputFormat, retryWithArgs =
   await ffmpeg.writeFile("list.txt", new TextEncoder().encode(listString));
 
   const command = ["-hide_banner", "-f", "concat", "-safe", "0", "-i", "list.txt", "-f", outputFormat.internal];
+  if (inputFormat.format === "png" || inputFormat.mime === "image/jpeg") {
+    command.push("-r", "1");
+  }
   if (retryWithArgs) command.push(...retryWithArgs);
   command.push("output");
 

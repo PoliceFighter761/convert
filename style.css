@@ -157,6 +157,16 @@ button.selected {
   text-align: center;
 }
 
+#popup button {
+  font-size: 1rem;
+  padding: 7px 20px;
+  border: 0;
+  border-radius: 10px;
+  background-color: lightgray;
+  color: black;
+  cursor: pointer;
+}
+
 @media only screen and (max-width: 800px) {
   #drop-hint-text {
     display: none;

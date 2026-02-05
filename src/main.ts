@@ -128,7 +128,7 @@ window.addEventListener("dragover", e => e.preventDefault());
  * Display an on-screen popup.
  * @param html HTML content of the popup box.
  */
-function showPopup (html: string) {
+window.showPopup = function (html: string) {
   ui.popupBox.innerHTML = html;
   ui.popupBox.style.display = "block";
   ui.popupBackground.style.display = "block";
@@ -136,7 +136,7 @@ function showPopup (html: string) {
 /**
  * Hide the on-screen popup.
  */
-function hidePopup () {
+window.hidePopup = function () {
   ui.popupBox.style.display = "none";
   ui.popupBackground.style.display = "none";
 }
@@ -234,7 +234,7 @@ async function buildOptionList () {
   filterButtonList(ui.inputList, ui.inputSearch.value);
   filterButtonList(ui.outputList, ui.outputSearch.value);
 
-  hidePopup();
+  window.hidePopup();
 
 }
 
@@ -273,7 +273,7 @@ const convertPathCache: Array<{
 async function attemptConvertPath (files: FileData[], path: ConvertPathNode[]) {
 
   ui.popupBox.innerHTML = `<h2>Finding conversion route...</h2>
-    <p>Trying ${path.map(c => c.format.format).join(" -> ")}</p>`;
+    <p>Trying <b>${path.map(c => c.format.format).join(" → ")}</b>...</p>`;
 
   const cacheLast = convertPathCache.at(-1);
   if (cacheLast) files = cacheLast.files;
@@ -297,7 +297,7 @@ async function attemptConvertPath (files: FileData[], path: ConvertPathNode[]) {
       convertPathCache.push({ files, node: path[i + 1] });
     } catch (e) {
       console.log(path.map(c => c.format.format));
-      console.error(handler.name, `${path[i].format.format} -> ${path[i + 1].format.format}`, e);
+      console.error(handler.name, `${path[i].format.format} → ${path[i + 1].format.format}`, e);
       return null;
     }
   }
@@ -371,6 +371,14 @@ async function buildConvertPath (
 
 }
 
+function downloadFile (bytes: Uint8Array, name: string, mime: string) {
+  const blob = new Blob([bytes as BlobPart], { type: mime });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = name;
+  link.click();
+}
+
 ui.convertButton.onclick = async function () {
 
   const inputFiles = selectedFiles;
@@ -388,46 +396,47 @@ ui.convertButton.onclick = async function () {
   const inputOption = allOptions[Number(inputButton.getAttribute("format-index"))];
   const outputOption = allOptions[Number(outputButton.getAttribute("format-index"))];
 
+  const inputFormat = inputOption.format;
+  const outputFormat = outputOption.format;
+
   try {
 
     const inputFileData = [];
     for (const inputFile of inputFiles) {
       const inputBuffer = await inputFile.arrayBuffer();
       const inputBytes = new Uint8Array(inputBuffer);
+      if (inputFormat.mime === outputFormat.mime) {
+        downloadFile(inputBytes, inputFile.name, inputFormat.mime);
+        continue;
+      }
       inputFileData.push({ name: inputFile.name, bytes: inputBytes });
     }
 
-    showPopup("<h2>Finding conversion route...</h2>");
+    window.showPopup("<h2>Finding conversion route...</h2>");
 
     const output = await buildConvertPath(inputFileData, outputOption, [[inputOption]]);
     if (!output) {
-      hidePopup();
+      window.hidePopup();
       alert("Failed to find conversion route.");
       return;
     }
 
-    const outputFormat = outputOption.format;
-
     for (const file of output.files) {
-      const blob = new Blob([file.bytes as BlobPart], { type: outputFormat.mime });
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.download = file.name;
-      link.click();
+      downloadFile(file.bytes, file.name, outputFormat.mime);
     }
 
-    alert(
-      `Converted ${inputOption.format.format} to ${outputOption.format.format}!\n` +
-      `Path used: ${output.path.map(c => c.format.format).join(" -> ")}`
+    window.showPopup(
+      `<h2>Converted ${inputOption.format.format} to ${outputOption.format.format}!</h2>` +
+      `<p>Path used: <b>${output.path.map(c => c.format.format).join(" → ")}</b>.</p>\n` +
+      `<button onclick="window.hidePopup()">OK</button>`
     );
 
   } catch (e) {
 
+    window.hidePopup();
     alert("Unexpected error while routing:\n" + e);
     console.error(e);
 
   }
-
-  hidePopup();
 
 };
